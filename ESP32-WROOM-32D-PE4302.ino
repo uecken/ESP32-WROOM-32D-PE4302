@@ -23,6 +23,9 @@ const int   daylightOffset_sec = 0;
 //double voltResolution = 255;
 //double High_octet =  0.7 * 255 * (3.3/5.0);
 //double Low_octet = 0.3 * 255 * (3.3/5);
+int vinPin = 39; //if wifi is on pin 2,4 cannot be used
+float voltage = 3.3;
+float ADCoffsetdB = +11;
 
 //Variable
 int i = 0;
@@ -59,7 +62,7 @@ void setup() {
       delay(500);
       Serial.print(".");
       i++;
-      if(i>10)break;
+      if(i>10) Serial.println("NG...");break;
   }
   Serial.println(" CONNECTED");
   
@@ -68,8 +71,15 @@ void setup() {
   printLocalTime();
 
 //AD setting
- analogReadResolution(12); //12 bits
- Serial.print((analogRead(0)*3.3/4095)/0.022);
+ /*
+ Serial.print(analogRead(2));
+ Serial.print(analogRead(4)); 
+ Serial.print(analogRead(36));
+ */
+ Serial.print(analogRead(39)); 
+
+ //analogReadResolution(12); //12 bits
+ Serial.print((float(analogRead(vinPin))*voltage/4095.0)/0.022);
  Serial.println(" dBm");
 }
 
@@ -91,7 +101,7 @@ void loop() {
       interval = msgs[1].toInt()*1000;
       iteration = msgs[2].toInt();
       for(j=0;j<iteration;j++){
-        HandOver4dBstep(interval,"ho_p18-12_and_p26-p14");
+        HandOver4dBstep(interval,"ho_p18-p12_and_p26-p14");
 
         udp.beginPacket(udpAddress,udpPort);
         udpLocalTime();
@@ -104,7 +114,7 @@ void loop() {
       //Input example: tp,30[s],1
       interval = msgs[1].toInt()*1000;
       //iteration = msgs[2].toInt();
-      Throughput4dBstep(interval,"tp_p18-12_and_p26-p14");
+      Throughput4dBstep(interval,"tp_p18-p12_and_p26-p14");
 
       udp.beginPacket(udpAddress,udpPort);
       udpLocalTime();
@@ -116,15 +126,16 @@ void loop() {
     else if(msgs[0] == "set" || msgs[0] == "setatt"){
       //Input example:set,28
       att = msgs[1].toInt();
-      setxdB(att,"p18-12"); //32dB
+      setxdB(att,"p18-p12"); //32dB
       setxdB(att,"p26-p14"); //32dB
-
+/*
       udp.beginPacket(udpAddress,udpPort);
       udpLocalTime();
       udp.printf("Set %d dB.", att);
       udp.endPacket();
       printLocalTime();
-      Serial.println("Set " + String(att) + " dB");
+*/
+Serial.println("Set " + String(att) + " dB");
     }
     else if(msgs[0] == "onoff"){
       //Input example:onoff,32,10,1000,5 // 32dB 10msOFF 1000msATT 5timeIteration
@@ -136,10 +147,10 @@ void loop() {
       Serial.println(String(att)+","+String(offtime)+","+String(interval)+","+String(iteration));
 
       for(k=0;k<iteration;k++){
-        setxdB(att,"p18-12"); //32dB
+        setxdB(att,"p18-p12"); //32dB
         setxdB(att,"p26-p14"); //32dB
         delay(offtime) ;     
-        setxdB(0,"p18-12"); //0dB
+        setxdB(0,"p18-p12"); //0dB
         setxdB(0,"p26-p14"); //32dB
         delay(interval-offtime);
       }
@@ -157,16 +168,16 @@ void loop() {
   printLocalTime();
   udp.beginPacket(udpAddress,udpPort);
   udpLocalTime();
-  udp.printf("No: %d, ", i++);
+  udp.printf("No: %d, ", i);
   udp.print((analogRead(0)*3.3/4095.0)/0.022);
   udp.print(" dBm");
   udp.endPacket();
   */
   Serial.print("No: " + String(i) + ", ");
-  Serial.print((analogRead(0)*3.3/4095.0)/0.022);
+  Serial.print(-1*(float(analogRead(vinPin))*voltage/4095.0)/0.022 + ADCoffsetdB);
   Serial.println(" dBm");
-    
   delay(1000);
+  i = i + 1;
 }
 
 void setPin(String pinArrange, unsigned char v1_HL,unsigned char v2_HL,unsigned char v3_HL,unsigned char v4_HL,unsigned char v5_HL,unsigned char v6_HL){
@@ -186,7 +197,7 @@ void setPin(String pinArrange, unsigned char v1_HL,unsigned char v2_HL,unsigned 
     digitalWrite(27,v5_HL); // V5 8dB
     digitalWrite(14,v6_HL); // V6 16dB
   }
-  else if(pinArrange =="ho_p18-12_and_p26-p14"){ 
+  else if(pinArrange =="ho_p18-p12_and_p26-p14"){ 
     //for handover
     digitalWrite(18,v1_HL); // V1 0.5dB
     digitalWrite(19,v2_HL); // V2 1dB
@@ -202,7 +213,7 @@ void setPin(String pinArrange, unsigned char v1_HL,unsigned char v2_HL,unsigned 
     digitalWrite(27,1-v5_HL); // V5 8dB
     digitalWrite(14,1-v6_HL); // V6 16dB
   }
-  else if(pinArrange =="tp_p18-12_and_p26-p14" || pinArrange =="default"){ 
+  else if(pinArrange =="tp_p18-p12_and_p26-p14" || pinArrange =="default"){ 
     //for throughput or default-use
     digitalWrite(18,v1_HL); // V1 0.5dB
     digitalWrite(19,v2_HL); // V2 1dB
