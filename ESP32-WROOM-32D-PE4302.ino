@@ -116,7 +116,8 @@ void loop() {
     else if(msgs[0] == "set" || msgs[0] == "setatt"){
       //Input example:set,28
       att = msgs[1].toInt();
-      setxdB(att,"default");
+      setxdB(att,"p18-12"); //32dB
+      setxdB(att,"p26-p14"); //32dB
 
       udp.beginPacket(udpAddress,udpPort);
       udpLocalTime();
@@ -135,12 +136,14 @@ void loop() {
       Serial.println(String(att)+","+String(offtime)+","+String(interval)+","+String(iteration));
 
       for(k=0;k<iteration;k++){
-        setxdB(att,"default"); //32dB
+        setxdB(att,"p18-12"); //32dB
+        setxdB(att,"p26-p14"); //32dB
         delay(offtime) ;     
-        setxdB(0,"default"); //0dB
+        setxdB(0,"p18-12"); //0dB
+        setxdB(0,"p26-p14"); //32dB
         delay(interval-offtime);
       }
-      
+
       udp.beginPacket(udpAddress,udpPort);
       udpLocalTime();
       udp.printf("onoff %d dB.", att);
@@ -150,6 +153,7 @@ void loop() {
     }
   }
 
+  /*
   printLocalTime();
   udp.beginPacket(udpAddress,udpPort);
   udpLocalTime();
@@ -157,11 +161,12 @@ void loop() {
   udp.print((analogRead(0)*3.3/4095.0)/0.022);
   udp.print(" dBm");
   udp.endPacket();
+  */
   Serial.print("No: " + String(i) + ", ");
   Serial.print((analogRead(0)*3.3/4095.0)/0.022);
   Serial.println(" dBm");
     
-  delay(2000);
+  delay(1000);
 }
 
 void setPin(String pinArrange, unsigned char v1_HL,unsigned char v2_HL,unsigned char v3_HL,unsigned char v4_HL,unsigned char v5_HL,unsigned char v6_HL){
