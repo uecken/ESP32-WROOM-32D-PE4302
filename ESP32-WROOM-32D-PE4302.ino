@@ -1,13 +1,16 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include "time.h"
+#include<Wire.h>
 
 //WiFi
 WiFiUDP udp;
-const char* ssid       = "elecom2g-6c8919";
-const char* password   = "lsnwple4aqr8";
-const char * udpAddress = "192.168.2.145";
-const int udpPort = 6543;
+//const char* ssid       = "elecom2g-6c8919";
+//const char* password   = "lsnwple4aqr8";
+const char* ssid       = "HUAWEI P10 lite";
+const char* password   = "inoueinoue";
+const char * udpAddress = "192.168.43.105";
+const int udpPort = 6105;
 boolean connected = false;
 
 //NTP
@@ -24,10 +27,12 @@ const int   daylightOffset_sec = 0;
 //Variable
 int i = 0;
 int j = 0;
+int k =0;
 int tpi = 0;
 int hoi = 0;
-String msgs[6] = {"\0"};
-int interval,iteration,att;
+String msg;
+String msgs[30] = {"\0"};
+int interval,iteration,att,offtime,ontime;
 
 void setup() {
     Serial.begin(115200);
@@ -53,22 +58,29 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
+      i++;
+      if(i>10)break;
   }
   Serial.println(" CONNECTED");
   
 //NTP sync
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   printLocalTime();
+
+//AD setting
+ analogReadResolution(12); //12 bits
+ Serial.print((analogRead(0)*3.3/4095)/0.022);
+ Serial.println(" dBm");
 }
 
 void loop() {
   if(Serial.available() > 0){
-    String msg =  Serial.readString();
+    msg =  Serial.readString();
     Serial.print("Serial Input: " + msg);  //gain,phase
     int len = split(msg,',',msgs);
      
     if(msgs[0] == "ho" || msgs[0] == "handover"){
-      //Input example: ho,2[s],999
+      //Input example: ho,2,999 //2second-interval 999iteration
       interval = msgs[1].toInt()*1000;
       iteration = msgs[2].toInt();
       for(j=0;j<iteration;j++){
@@ -97,7 +109,7 @@ void loop() {
     else if(msgs[0] == "set" || msgs[0] == "setatt"){
       //Input example:set,28
       att = msgs[1].toInt();
-      setxdB(att,"normal");
+      setxdB(att,"default");
 
       udp.beginPacket(udpAddress,udpPort);
       udpLocalTime();
@@ -106,16 +118,43 @@ void loop() {
       printLocalTime();
       Serial.println("Set " + String(att) + " dB");
     }
+    else if(msgs[0] == "onoff"){
+      //Input example:onoff,32,10,1000,5 // 32dB 10msOFF 1000msATT 5timeIteration
+      att = msgs[1].toInt();
+      offtime = msgs[2].toInt();
+      interval = msgs[3].toInt();
+      iteration = msgs[4].toInt();
+      Serial.println(msgs[1]+","+msgs[2]+","+msgs[3]+","+msgs[4]);
+      Serial.println(String(att)+","+String(offtime)+","+String(interval)+","+String(iteration));
+
+      for(k=0;k<iteration;k++){
+        setxdB(att,"default"); //32dB
+        delay(offtime) ;     
+        setxdB(0,"default"); //0dB
+        delay(interval-offtime);
+      }
+      
+      udp.beginPacket(udpAddress,udpPort);
+      udpLocalTime();
+      udp.printf("onoff %d dB.", att);
+      udp.endPacket();
+      printLocalTime();
+      Serial.println("onoff " + String(att) + " dB");
+    }
   }
 
   printLocalTime();
   udp.beginPacket(udpAddress,udpPort);
   udpLocalTime();
-  udp.printf("No: %d", i++);
+  udp.printf("No: %d, ", i++);
+  udp.print((analogRead(0)*3.3/4095.0)/0.022);
+  udp.print(" dBm");
   udp.endPacket();
-  Serial.println("No: " + String(i));
-  
-  delay(3000);
+  Serial.print("No: " + String(i) + ", ");
+  Serial.print((analogRead(0)*3.3/4095.0)/0.022);
+  Serial.println(" dBm");
+    
+  delay(2000);
 }
 
 void setPin(String pinArrange, unsigned char v1_HL,unsigned char v2_HL,unsigned char v3_HL,unsigned char v4_HL,unsigned char v5_HL,unsigned char v6_HL){
@@ -268,7 +307,7 @@ void udpLocalTime(){
 // Thanks to https://algorithm.joho.info/arduino/string-split-delimiter/
 int split(String data, char delimiter, String *dst){
     //文字列配列の初期化
-    for (int j=0; j< sizeof(dst); j++){
+    for (int j=0; j<= sizeof(dst); j++){
       //Serial.println(dst(j));
       dst[j] = {""}; 
     }
