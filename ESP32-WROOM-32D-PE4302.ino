@@ -78,8 +78,15 @@ void loop() {
     msg =  Serial.readString();
     Serial.print("Serial Input: " + msg);  //gain,phase
     int len = split(msg,',',msgs);
-     
-    if(msgs[0] == "ho" || msgs[0] == "handover"){
+
+    if(msgs[0] == "h" || msgs[0] == "help"){
+      Serial.println("Command list;");
+      Serial.println("  ho,2,999 //4dB change every 2second, iterate 999times");
+      Serial.println("  tp,30,1 //+2dB every 30second-interval, iterate 1time");
+      Serial.println("  set,28 //set to 28dB");
+      Serial.println("  onoff,32,10,1000,5 //switch attenuator, 10msOFF 1000msON , iterate 5times");
+    }
+    else if(msgs[0] == "ho" || msgs[0] == "handover"){
       //Input example: ho,2,999 //2second-interval 999iteration
       interval = msgs[1].toInt()*1000;
       iteration = msgs[2].toInt();
